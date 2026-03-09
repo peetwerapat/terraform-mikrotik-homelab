@@ -1,0 +1,15 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Crash log
+crash.log
+
+# Sensitive variables
+*.tfvars
+*.tfvars.json
+
+# CLI config
+.terraformrc
+terraform.rc
