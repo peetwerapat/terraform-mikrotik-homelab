@@ -18,6 +18,10 @@ resource "routeros_interface_bridge_port" "ether3" {
 resource "routeros_interface_bridge_port" "ether4" {
   bridge    = routeros_interface_bridge.lan.name
   interface = "ether4"
+
+  pvid              = 30
+  frame_types       = "admit-only-untagged-and-priority-tagged"
+  ingress_filtering = true
 }
 
 resource "routeros_interface_bridge_vlan" "workspace" {
@@ -41,7 +45,10 @@ resource "routeros_interface_bridge_vlan" "server" {
   vlan_ids = ["30"]
 
   tagged = [
-    routeros_interface_bridge.lan.name,
+    routeros_interface_bridge.lan.name
+  ]
+
+  untagged = [
     "ether4"
   ]
 }
