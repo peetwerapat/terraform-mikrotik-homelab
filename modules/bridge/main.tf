@@ -24,7 +24,7 @@ resource "routeros_interface_bridge_port" "ether4" {
   ingress_filtering = true
 }
 
-resource "routeros_interface_bridge_vlan" "workspace" {
+resource "routeros_interface_bridge_vlan" "agent" {
   bridge   = routeros_interface_bridge.lan.name
   vlan_ids = ["10"]
 
@@ -32,7 +32,7 @@ resource "routeros_interface_bridge_vlan" "workspace" {
   untagged = ["ether2"]
 }
 
-resource "routeros_interface_bridge_vlan" "gaming" {
+resource "routeros_interface_bridge_vlan" "workspace" {
   bridge   = routeros_interface_bridge.lan.name
   vlan_ids = ["20"]
 

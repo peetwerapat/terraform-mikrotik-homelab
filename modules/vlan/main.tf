@@ -1,13 +1,13 @@
 variable "bridge" {}
 
-resource "routeros_interface_vlan" "workspace" {
-  name      = "vlan-workspace"
+resource "routeros_interface_vlan" "agent" {
+  name      = "vlan-agent"
   interface = var.bridge
   vlan_id   = 10
 }
 
-resource "routeros_interface_vlan" "gaming" {
-  name      = "vlan-gaming"
+resource "routeros_interface_vlan" "workspace" {
+  name      = "vlan-workspace"
   interface = var.bridge
   vlan_id   = 20
 }

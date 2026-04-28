@@ -65,14 +65,14 @@ resource "routeros_ip_firewall_filter" "lan_to_wan" {
   out_interface_list = "WAN"
 }
 
-resource "routeros_ip_firewall_filter" "block_wifi_workspace" {
+resource "routeros_ip_firewall_filter" "block_wifi_agent" {
   chain       = "forward"
   action      = "drop"
   src_address = "10.40.40.0/24"
   dst_address = "10.10.10.0/24"
 }
 
-resource "routeros_ip_firewall_filter" "block_gaming_server" {
+resource "routeros_ip_firewall_filter" "block_workspace_server" {
   chain       = "forward"
   action      = "drop"
   src_address = "10.20.20.0/24"

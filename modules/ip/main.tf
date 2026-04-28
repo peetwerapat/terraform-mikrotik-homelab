@@ -1,11 +1,11 @@
-resource "routeros_ip_address" "workspace" {
+resource "routeros_ip_address" "agent" {
   address   = "10.10.10.1/24"
-  interface = "vlan-workspace"
+  interface = "vlan-agent"
 }
 
-resource "routeros_ip_address" "gaming" {
+resource "routeros_ip_address" "workspace" {
   address   = "10.20.20.1/24"
-  interface = "vlan-gaming"
+  interface = "vlan-workspace"
 }
 
 resource "routeros_ip_address" "server" {

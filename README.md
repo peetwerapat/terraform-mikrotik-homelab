@@ -17,8 +17,8 @@ Internet
 │         MikroTik Router         │
 │                                 │
 │  bridge-lan (VLAN filtering)    │
-│  ├── VLAN 10 - Workspace        │  10.10.10.0/24
-│  ├── VLAN 20 - Gaming           │  10.20.20.0/24
+│  ├── VLAN 10 - Agent            │  10.10.10.0/24
+│  ├── VLAN 20 - Workspace        │  10.20.20.0/24
 │  ├── VLAN 30 - Server           │  10.30.30.0/24
 │  └── VLAN 40 - WiFi             │  10.40.40.0/24
 │                                 │
@@ -34,9 +34,9 @@ Internet
 | Module | Description |
 |--------|-------------|
 | `bridge` | Creates bridge interface with VLAN filtering and port assignments |
-| `vlan` | Defines VLAN interfaces (workspace, gaming, server, wifi) |
+| `vlan` | Defines VLAN interfaces (agent, workspace, server, wifi) |
 | `ip` | Assigns IP addresses to VLAN and management interfaces |
-| `dhcp` | Configures DHCP servers and pools for workspace, gaming, and wifi networks |
+| `dhcp` | Configures DHCP servers and pools for agent, workspace, and wifi networks |
 | `dns` | Sets up DNS resolver with Cloudflare (1.1.1.1) and Google (8.8.8.8) upstreams |
 | `pppoe` | Configures PPPoE client on ether1 for WAN connectivity |
 | `nat` | Configures source NAT (masquerade) for internet access |
@@ -90,7 +90,7 @@ Internet
 
 **Input chain:** Accepts established/related connections and ICMP, allows DNS, drops all WAN input.
 
-**Forward chain:** Fast-tracks established connections, allows LAN-to-WAN, blocks WiFi-to-workspace and gaming-to-server cross-VLAN traffic.
+**Forward chain:** Fast-tracks established connections, allows LAN-to-WAN, blocks WiFi-to-agent and workspace-to-server cross-VLAN traffic.
 
 **Output chain:** Accepts established connections and DNS traffic.
 
