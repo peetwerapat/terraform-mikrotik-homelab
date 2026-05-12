@@ -1,10 +1,7 @@
 # Terraform MikroTik Homelab
 
-Infrastructure as Code for managing a MikroTik RouterOS-based home network using Terraform.
-
-## Overview
-
-This project uses the [terraform-routeros](https://github.com/terraform-routeros/terraform-routeros) provider to declaratively configure a MikroTik router with VLANs, DHCP, DNS, PPPoE, NAT, and firewall rules.
+Infrastructure as Code for a MikroTik RouterOS home network, using the
+[terraform-routeros](https://github.com/terraform-routeros/terraform-routeros) provider.
 
 ## Network Architecture
 
@@ -31,69 +28,136 @@ Internet
 
 ## Modules
 
-| Module | Description |
-|--------|-------------|
-| `bridge` | Creates bridge interface with VLAN filtering and port assignments |
-| `vlan` | Defines VLAN interfaces (agent, workspace, server, wifi) |
-| `ip` | Assigns IP addresses to VLAN and management interfaces |
-| `dhcp` | Configures DHCP servers and pools for agent, workspace, and wifi networks |
-| `dns` | Sets up DNS resolver with Cloudflare (1.1.1.1) and Google (8.8.8.8) upstreams |
-| `pppoe` | Configures PPPoE client on ether1 for WAN connectivity |
-| `nat` | Configures source NAT (masquerade) for internet access |
-| `firewall` | Implements input, forward, and output firewall rules |
+| Module     | Description |
+|------------|-------------|
+| `bridge`   | Bridge with VLAN filtering and ingress-filtered access ports |
+| `vlan`     | VLAN interfaces (agent, workspace, server, wifi) |
+| `ip`       | IP addresses on VLAN and management interfaces |
+| `dhcp`     | DHCP servers and pools (agent, workspace, wifi) |
+| `dns`      | DNS resolver with Cloudflare and Google upstreams |
+| `pppoe`    | PPPoE client on ether1 |
+| `nat`      | Interface lists (LAN/WAN) and masquerade |
+| `firewall` | Input/forward chains with explicit order (`place_before`) and default deny |
+| `services` | `/ip service` hardening + `/system identity` |
 
-## Prerequisites
+## Security model
 
-- [Terraform](https://www.terraform.io/downloads) >= 1.5
-- A MikroTik router running RouterOS
-- API access enabled on the router
+- **Forward chain** is default-deny. Only `LAN → WAN` is accepted; **all inter-VLAN
+  traffic is dropped unless an explicit allow is added** before `forward_drop_all`.
+- **Input chain** accepts established/related, ICMP, and any traffic from the `LAN`
+  interface list. Anything else (including all WAN input) is dropped.
+- **Service exposure** is restricted via `/ip service address=` to `mgmt_allowed_ips`.
+  `telnet` and `ftp` are disabled.
+- **Bridge access ports** (`ether2`–`ether4`) use `frame_types=admit-only-untagged-and-priority-tagged`
+  with `ingress_filtering=true` to prevent VLAN hopping.
 
-## Usage
+### Allowing specific inter-VLAN traffic
 
-1. Clone the repository:
+Add a rule in `modules/firewall/main.tf` above `forward_drop_all`, for example:
 
-   ```bash
-   git clone https://github.com/<your-username>/terraform-mikrotik-homelab.git
-   cd terraform-mikrotik-homelab
-   ```
-
-2. Create a `terraform.tfvars` file with your configuration:
-
-   ```hcl
-   router_host     = "YOUR_ROUTER_HOST"
-   router_user     = "YOUR_ROUTER_USER"
-   router_password = "YOUR_ROUTER_PASSWORD"
-
-   pppoe_user     = "YOUR_PPPOE_USER"
-   pppoe_password = "YOUR_PPPOE_PASSWORD"
-   ```
-
-3. Initialize and apply:
-
-   ```bash
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+```hcl
+resource "routeros_ip_firewall_filter" "workspace_to_server_ssh" {
+  chain        = "forward"
+  action       = "accept"
+  src_address  = "10.20.20.0/24"
+  dst_address  = "10.30.30.0/24"
+  protocol     = "tcp"
+  dst_port     = "22"
+  place_before = routeros_ip_firewall_filter.forward_drop_all.id
+}
+```
 
 ## Variables
 
-| Variable | Description |
-|----------|-------------|
-| `router_host` | RouterOS API URL |
-| `router_user` | RouterOS username |
-| `router_password` | RouterOS password |
-| `pppoe_user` | ISP PPPoE username |
-| `pppoe_password` | ISP PPPoE password |
+| Variable           | Required | Default                                     | Description |
+|--------------------|----------|---------------------------------------------|-------------|
+| `router_host`      | yes      | —                                           | RouterOS host URL or IP |
+| `router_user`      | yes      | —                                           | RouterOS API user |
+| `router_password`  | yes      | —                                           | RouterOS API password (sensitive) |
+| `pppoe_user`       | yes      | —                                           | ISP PPPoE username |
+| `pppoe_password`   | yes      | —                                           | ISP PPPoE password (sensitive) |
+| `system_identity`  | no       | `homelab-router`                            | RouterOS identity |
+| `mgmt_allowed_ips` | no       | `["10.40.40.0/24", "192.168.99.0/24"]`      | CIDRs allowed to reach winbox/ssh/api/www |
 
-## Firewall Rules Summary
+## Prerequisites
 
-**Input chain:** Accepts established/related connections and ICMP, allows DNS, drops all WAN input.
+- Terraform >= 1.5
+- MikroTik router with RouterOS API enabled
+- Your workstation must be on one of the `mgmt_allowed_ips` CIDRs **before** applying
+  (the apply restricts service addresses — you can lock yourself out otherwise)
 
-**Forward chain:** Fast-tracks established connections, allows LAN-to-WAN, blocks WiFi-to-agent and workspace-to-server cross-VLAN traffic.
+## Run steps (applying to a live router)
 
-**Output chain:** Accepts established connections and DNS traffic.
+> **Read this section before running `apply`.** This config changes firewall behavior
+> and management-service exposure on a live router.
 
-## License
+1. **Back up the router config first** (RouterOS terminal):
 
-This project is provided as-is for personal use.
+   ```routeros
+   /export file=before-terraform-apply
+   /system backup save name=before-terraform-apply
+   ```
+
+   Download both files via Files → drag to your machine.
+
+2. **Verify your client IP** is inside `mgmt_allowed_ips`. Default covers the
+   wifi VLAN (`10.40.40.0/24`) and ether5 mgmt (`192.168.99.0/24`). If you manage
+   from somewhere else, update `var.mgmt_allowed_ips` first.
+
+3. **Init & plan**:
+
+   ```bash
+   terraform init -upgrade
+   terraform plan -var-file=env/home.tfvars -out=plan.tfplan
+   ```
+
+   Review the plan. Expect:
+   - **~adds**: `input_invalid`, `input_lan`, `input_drop_all`, `forward_drop_all`,
+     LAN interface-list members for each VLAN, services module resources.
+   - **~changes**: existing firewall rules get `comment` + `place_before` set
+     (in-place updates, including a move operation in RouterOS).
+   - **~destroys**: `block_wifi_agent`, `block_workspace_server` (subsumed by default deny);
+     `input_dns_udp`, `input_dns_tcp`, `drop_wan_input` (subsumed by `input_lan` + `input_drop_all`);
+     all `output_*` rules (RouterOS output defaults to accept).
+
+4. **Apply**:
+
+   ```bash
+   terraform apply plan.tfplan
+   ```
+
+   Brief network blips are possible while firewall rules are reshuffled.
+
+5. **Verify on the router**:
+
+   ```routeros
+   /ip firewall filter print
+   /ip firewall nat print
+   /interface list member print
+   /ip service print
+   ```
+
+   Confirm the input/forward chain order matches the comments above.
+
+6. **Smoke-test connectivity**:
+   - From each VLAN: ping `8.8.8.8` (LAN → WAN should work).
+   - From workspace VLAN: ping a host in server VLAN (should **fail** — default deny).
+   - winbox/ssh from outside `mgmt_allowed_ips` (should **fail**).
+
+### Rollback
+
+If something is broken and you cannot reach the router:
+
+1. Console in via serial / direct ethernet on ether5 (`192.168.99.0/24`).
+2. Restore: `/system backup load name=before-terraform-apply`
+3. Investigate, fix, re-plan.
+
+## Future improvements
+
+- **Remote state**: the `terraform.tfstate` is currently local. Consider an S3/MinIO/HTTP
+  backend so state isn't lost if the workstation dies.
+- **Secret management**: move `env/home.tfvars` secrets into `TF_VAR_*` env vars or a
+  secret manager (sops, Vault) and stop committing the file pattern.
+- **VLAN refactor**: collapse `modules/vlan`, `modules/ip`, `modules/dhcp` into a single
+  `for_each` over a locals map (would need `moved` blocks to migrate state safely).
+- **NTP**: add `routeros_system_ntp_client` for time sync.

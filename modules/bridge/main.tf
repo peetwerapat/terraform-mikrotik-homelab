@@ -4,21 +4,24 @@ resource "routeros_interface_bridge" "lan" {
 }
 
 resource "routeros_interface_bridge_port" "ether2" {
-  bridge    = routeros_interface_bridge.lan.name
-  interface = "ether2"
-  pvid      = 10
+  bridge            = routeros_interface_bridge.lan.name
+  interface         = "ether2"
+  pvid              = 10
+  frame_types       = "admit-only-untagged-and-priority-tagged"
+  ingress_filtering = true
 }
 
 resource "routeros_interface_bridge_port" "ether3" {
-  bridge    = routeros_interface_bridge.lan.name
-  interface = "ether3"
-  pvid      = 20
+  bridge            = routeros_interface_bridge.lan.name
+  interface         = "ether3"
+  pvid              = 20
+  frame_types       = "admit-only-untagged-and-priority-tagged"
+  ingress_filtering = true
 }
 
 resource "routeros_interface_bridge_port" "ether4" {
-  bridge    = routeros_interface_bridge.lan.name
-  interface = "ether4"
-
+  bridge            = routeros_interface_bridge.lan.name
+  interface         = "ether4"
   pvid              = 30
   frame_types       = "admit-only-untagged-and-priority-tagged"
   ingress_filtering = true
