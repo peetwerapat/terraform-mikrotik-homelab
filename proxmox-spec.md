@@ -7,13 +7,13 @@ IP: 10.30.30.11/24
 
 # Ubuntu-Runtime
 CPU: 2 cores
-RAM: 4 GB
+RAM: 10 GB
 SSD: 40 GB
 IP: 10.30.30.12/24
 
 # Ubuntu-Panel
 CPU: 2 core
-RAM: 3 GB
+RAM: 6 GB
 SSD: 50 GB
 IP: 10.30.30.13/24
 
