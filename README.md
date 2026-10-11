@@ -34,11 +34,27 @@ Internet
 | `vlan`     | VLAN interfaces (agent, workspace, server, wifi) |
 | `ip`       | IP addresses on VLAN and management interfaces |
 | `dhcp`     | DHCP servers and pools (agent, workspace, wifi) |
-| `dns`      | DNS resolver with Cloudflare and Google upstreams |
+| `dns`      | DNS resolver forwarding to Pi-hole at `10.10.10.10` |
 | `pppoe`    | PPPoE client on ether1 |
 | `nat`      | Interface lists (LAN/WAN) and masquerade |
 | `firewall` | Input/forward chains with explicit order (`place_before`) and default deny |
 | `services` | `/ip service` hardening + `/system identity` |
+
+## DNS through Pi-hole
+
+The Pi-hole host has the static address `10.10.10.10` on VLAN 10. DHCP continues
+to advertise each VLAN's MikroTik gateway as its DNS server. RouterOS accepts DNS
+requests from LAN clients and forwards them to Pi-hole, so the default-deny
+inter-VLAN firewall policy does not need an exception. Pi-hole sees the router's
+VLAN 10 address as the DNS client rather than each individual device.
+
+Pi-hole uses `1.1.1.1` and `8.8.8.8` as its upstream DNS servers. Keep Pi-hole as
+the router's only upstream to avoid clients bypassing its blocklists. DNS
+resolution for the LAN depends on Pi-hole being online; switch the router's
+upstream back to a reachable resolver if Pi-hole is unavailable.
+
+The agent DHCP pool starts at `10.10.10.11` so it does not assign the Pi-hole
+host's static address.
 
 ## Security model
 

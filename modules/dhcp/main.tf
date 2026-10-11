@@ -1,6 +1,6 @@
 resource "routeros_ip_pool" "agent" {
   name   = "agent_pool"
-  ranges = ["10.10.10.10-10.10.10.200"]
+  ranges = ["10.10.10.11-10.10.10.200"]
 }
 
 resource "routeros_ip_pool" "workspace" {
